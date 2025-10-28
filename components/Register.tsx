@@ -26,7 +26,7 @@ export default function Register({ onRegister, onCancel }: RegisterProps) {
     setLoading(true);
 
     try {
-      const { data } = await axios.post(`${process.env.API_URL}/auth/register`, form);
+      const { data } = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}auth/register`, form);
       onRegister(data.accessToken);
     } catch (err: unknown) {
       const msg =
