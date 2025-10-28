@@ -26,7 +26,7 @@ export default function Register({ onRegister, onCancel }: RegisterProps) {
     setLoading(true);
 
     try {
-      const { data } = await axios.post('http://localhost:3001/auth/register', form);
+      const { data } = await axios.post(`${process.env.API_URL}/auth/register`, form);
       onRegister(data.accessToken);
     } catch (err: unknown) {
       const msg =
