@@ -1,26 +1,94 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* Colors */
+  --bg: #f8fafc; /* slate-50 */
+  --card: #ffffff;
+  --muted: #6b7280;
+  --accent: #2563eb; /* blue-600 */
+  --accent-2: #10b981; /* green-500 */
+  --danger: #dc2626;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Typography */
+  --font-sans: var(--font-geist-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue');
+  --radius: 12px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #0b1220;
+    --card: #071024;
+    --muted: #9ca3af;
+    --accent: #60a5fa;
   }
 }
 
+html, body, #__next {
+  height: 100%;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg);
+  color: #0f172a;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* App container helpers */
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main {
+  flex: 1 1 auto;
+  display: flex;
+  gap: 1rem;
+}
+
+/* Chat specific */
+.chat-sidebar {
+  width: 20rem; /* 320px */
+}
+
+.chat-window {
+  flex: 1 1 auto;
+  background: transparent;
+}
+
+/* Message bubbles */
+.bubble {
+  max-width: 60%;
+  padding: 0.6rem 0.9rem;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+  word-wrap: break-word;
+}
+.bubble--mine { background: var(--accent); color: white; border-bottom-right-radius: 6px; }
+.bubble--their { background: var(--card); color: #0f172a; border-bottom-left-radius: 6px; }
+
+.context-menu {
+  min-width: 140px;
+  background: var(--card);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.12);
+  overflow: hidden;
+}
+
+.input-ghost {
+  background: transparent;
+  border: 1px solid rgba(15,23,42,0.06);
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+}
+
+/* small utilities */
+.muted { color: var(--muted); }
+.visually-hidden { position: absolute !important; height: 1px; width: 1px; overflow: hidden; clip: rect(1px, 1px, 1px, 1px); white-space: nowrap; }
+
+/* minor responsive tweaks */
+@media (max-width: 768px) {
+  .chat-sidebar { display: none; }
 }

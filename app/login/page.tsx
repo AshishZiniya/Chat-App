@@ -1,12 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import ChatApp from '@/components/ChatApp';
+import Login from '@/components/Login';
+import Register from '@/components/Register';
 
-export default function Page() {
+export default function LoginPage() {
   // Avoid reading localStorage during SSR to prevent hydration mismatches.
   const [mounted, setMounted] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  const [showRegister, setShowRegister] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -20,25 +22,28 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
-    if (mounted && !token) {
-      router.push('/login');
+    if (token) {
+      router.push('/');
     }
-  }, [mounted, token, router]);
+  }, [token, router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-    // Redirect to login page
-    router.push('/login');
+  const handleLogin = (tok: string) => {
+    localStorage.setItem('token', tok);
+    setToken(tok);
+    // Redirect to main page
+    router.push('/');
   };
+
 
   // While rendering on the server (not mounted) return a minimal placeholder
   // so server and client markup match. The real UI will mount on the client.
   if (!mounted) return <div />;
 
-  if (!token) {
-    return <div />;
-  }
+  if (token) return <div />;
 
-  return <ChatApp token={token} onLogout={handleLogout} />;
+  return showRegister ? (
+    <Register onRegister={(tok)=> handleLogin(tok)} onCancel={()=> setShowRegister(false)} />
+  ) : (
+    <Login onLogin={(tok)=> handleLogin(tok)} onShowRegister={() => setShowRegister(true)} />
+  );
 }
