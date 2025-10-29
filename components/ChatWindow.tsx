@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import type { User, Message, TypingPayload } from '../types';
+import { FaComments, FaTrash, FaTimes, FaPaperPlane } from 'react-icons/fa';
 
 export default function ChatWindow({ messages, activeUser, myId, onSend, onTyping, typingFrom, onDelete }: {
   messages: Message[];
@@ -24,9 +25,7 @@ export default function ChatWindow({ messages, activeUser, myId, onSend, onTypin
   if (!activeUser) return (
     <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
       <div className="w-20 h-20 bg-linear-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-6">
-        <svg className="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
+        <FaComments className="w-10 h-10 text-blue-500" />
       </div>
       <h3 className="text-xl font-semibold text-gray-900 mb-2">Select a conversation</h3>
       <p className="text-gray-600 max-w-sm">Choose a contact from the sidebar to start chatting</p>
@@ -134,9 +133,7 @@ export default function ChatWindow({ messages, activeUser, myId, onSend, onTypin
         }).length === 0 && (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-linear-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
+              <FaComments className="w-8 h-8 text-blue-500" />
             </div>
             <h4 className="text-lg font-semibold text-gray-900 mb-2">Start a conversation</h4>
             <p className="text-gray-600">Send your first message to {activeUser.username}</p>
@@ -150,9 +147,7 @@ export default function ChatWindow({ messages, activeUser, myId, onSend, onTypin
             onMouseLeave={closeContext}
           >
             <button className="flex items-center gap-2 px-4 py-3 text-sm hover:bg-red-50 w-full text-left text-red-600" onClick={() => handleDelete(contextMenu.id)}>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
+              <FaTrash className="w-4 h-4" />
               Delete message
             </button>
           </div>
@@ -180,7 +175,7 @@ export default function ChatWindow({ messages, activeUser, myId, onSend, onTypin
               onTyping(activeUser._id, e.target.value.length > 0);
             }}
             placeholder={`Message ${activeUser.username}...`}
-            className="input-ghost w-full pr-12"
+            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full ps-10 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 pr-12"
             style={{ minHeight: '44px' }}
           />
           {text.trim() && (
@@ -189,9 +184,7 @@ export default function ChatWindow({ messages, activeUser, myId, onSend, onTypin
               onClick={() => setText('')}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <FaTimes className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -200,9 +193,7 @@ export default function ChatWindow({ messages, activeUser, myId, onSend, onTypin
           disabled={!text.trim()}
           className="btn-primary px-6 py-3 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-          </svg>
+          <FaPaperPlane className="w-4 h-4" />
           <span className="hidden sm:inline">Send</span>
         </button>
       </form>

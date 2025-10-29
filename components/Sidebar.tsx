@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import Image from 'next/image';
+import { FaSearch, FaUsers, FaCheck } from 'react-icons/fa';
 
 type User = {
   _id: string;
@@ -28,18 +29,18 @@ export default function Sidebar({ users, meUsername, meId, onSelect, activeUser 
   return (
     <aside className="w-full md:w-80 bg-white border rounded-xl p-4 h-full flex flex-col shadow-sm" aria-label="Contacts and profile">
       <div className="mb-4">
-        <div className="relative">
-          <label htmlFor="search-users" className="visually-hidden">Search users</label>
+        <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Search contacts</label>
+        <div className="relative mb-6">
+          <div className="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none">
+            <FaSearch className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          </div>
           <input
             id="search-users"
             placeholder="Search contacts..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="input-ghost w-full pl-10 pr-4 py-3 text-sm"
+            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full ps-10 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
           />
-          <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
         </div>
       </div>
 
@@ -53,9 +54,7 @@ export default function Sidebar({ users, meUsername, meId, onSelect, activeUser 
 
         {filteredUsers.length === 0 ? (
           <div className="text-center py-8">
-            <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
+            <FaUsers className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 text-sm">
               {searchTerm ? 'No contacts found' : 'No contacts yet'}
             </p>
@@ -94,9 +93,7 @@ export default function Sidebar({ users, meUsername, meId, onSelect, activeUser 
                   </div>
                 </div>
                 {activeUser?._id === u._id && (
-                  <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
+                  <FaCheck className="w-5 h-5 text-blue-500" />
                 )}
               </li>
             ))}

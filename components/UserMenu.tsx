@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { jwtDecode } from 'jwt-decode';
+import { FaChevronDown, FaSignOutAlt } from 'react-icons/fa';
 
 export default function UserMenu() {
     const [username, setUsername] = useState<string | null>(null);
@@ -51,9 +52,7 @@ export default function UserMenu() {
                 <span className="hidden sm:inline text-sm font-medium text-gray-700">
                     {username}
                 </span>
-                <svg className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+                <FaChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
             </button>
 
             {open && (
@@ -68,9 +67,7 @@ export default function UserMenu() {
                             onClick={handleLogout}
                             className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors duration-150"
                         >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                            </svg>
+                            <FaSignOutAlt className="w-4 h-4" />
                             Sign out
                         </button>
                     </div>
