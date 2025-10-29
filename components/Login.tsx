@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import axios from 'axios';
-import { FaComments, FaUser, FaLock, FaSpinner, FaSignInAlt } from 'react-icons/fa';
+import { FaComments, FaUser, FaLock, FaSpinner, FaSignInAlt, FaEye, FaEyeSlash } from 'react-icons/fa';
 
 interface LoginProps {
   onLogin: (token: string) => void;
@@ -9,9 +9,10 @@ interface LoginProps {
 }
 
 export default function Login({ onLogin, onShowRegister }: LoginProps) {
-  const [form, setForm] = useState({ username: '', password: '' });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+   const [form, setForm] = useState({ username: '', password: '' });
+   const [loading, setLoading] = useState(false);
+   const [error, setError] = useState<string | null>(null);
+   const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -86,10 +87,17 @@ export default function Login({ onLogin, onShowRegister }: LoginProps) {
                 value={form.password}
                 onChange={handleChange}
                 placeholder="Enter your password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full ps-10 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full ps-10 p-2.5 pr-10 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                {showPassword ? <FaEyeSlash className="w-4 h-4" /> : <FaEye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
