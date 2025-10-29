@@ -18,7 +18,7 @@ export default function ChatApp({ token, onLogout }: { token: string; onLogout: 
   const myId = decoded?.sub ?? '';
 
   useEffect(()=> {
-    const s = io('http://localhost:3001', {
+    const s = io(process.env.NEXT_PUBLIC_API_URL, {
       auth: { token: `Bearer ${token}` },
       transports: ['websocket'],
     });
@@ -80,11 +80,11 @@ export default function ChatApp({ token, onLogout }: { token: string; onLogout: 
   };
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row bg-transparent rounded-lg overflow-hidden">
-      <div className="chat-sidebar bg-white/60 border rounded-lg p-2 md:p-0">
+    <div className="flex-1 flex flex-col lg:flex-row gap-6 bg-transparent">
+      <div className="chat-sidebar">
         <Sidebar users={users} meUsername={me} meId={myId} onSelect={selectUser} activeUser={activeUser} onLogout={onLogout} />
       </div>
-      <div className="chat-window flex-1 ml-0 md:ml-4">
+      <div className="chat-window flex-1">
         <ChatWindow messages={messages} activeUser={activeUser} myId={myId} onSend={sendMessage} onTyping={sendTyping} typingFrom={typingFrom} onDelete={handleDelete} />
       </div>
     </div>
