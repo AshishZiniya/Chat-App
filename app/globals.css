@@ -93,12 +93,10 @@ body {
   transform: translateY(-1px);
 }
 .bubble--mine {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
   color: white;
   border-bottom-right-radius: var(--radius-sm);
 }
 .bubble--their {
-  background: var(--card);
   color: var(--text-primary);
   border-bottom-left-radius: var(--radius-sm);
   border: 1px solid var(--border);
@@ -200,5 +198,4 @@ body {
 /* minor responsive tweaks */
 @media (max-width: 768px) {
   .chat-sidebar { display: none; }
-  .app-main { gap: 1rem; }
 }

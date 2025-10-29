@@ -5,7 +5,7 @@ import Image from 'next/image';
 import type { User, Message, TypingPayload } from '../types';
 import { FaComments, FaTrash, FaTimes, FaPaperPlane } from 'react-icons/fa';
 
-export default function ChatWindow({ messages, activeUser, myId, onSend, onTyping, typingFrom, onDelete }: {
+export default function ChatWindow({ messages, activeUser, myId, onSend, onTyping, typingFrom, onDelete, users }: {
   messages: Message[];
   activeUser: User | null;
   myId: string;
@@ -13,6 +13,7 @@ export default function ChatWindow({ messages, activeUser, myId, onSend, onTypin
   onTyping: (to: string, typing: boolean) => void;
   typingFrom: TypingPayload | null;
   onDelete: (id: string) => void;
+  users: User[];
 }) {
   const [text, setText] = useState('');
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -53,7 +54,7 @@ export default function ChatWindow({ messages, activeUser, myId, onSend, onTypin
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border">
+    <div className="flex flex-col h-full bg-white shadow-sm border-l">
       <div className="border-b border-gray-200 p-4 flex items-center gap-4 bg-linear-to-r from-white to-gray-50">
         <div className="relative">
           <Image
@@ -95,12 +96,15 @@ export default function ChatWindow({ messages, activeUser, myId, onSend, onTypin
           })
           .map((m, idx) => {
             const isMine = m.from === myId;
+            const sender = users.find(u => u._id === m.from);
+            const senderAvatar = sender?.avatar || `https://ui-avatars.com/api/?name=${sender?.username || m.username}`;
+            const senderUsername = sender?.username || m.username;
             return (
-              <div key={String(m._id) + idx} className={`flex items-end gap-3 mb-6 group ${isMine ? 'justify-end' : 'justify-start'}`} onContextMenu={(e) => handleContext(e, String(m._id))}>
+              <div key={String(m._id) + idx} className={`flex items-end gap-3 mb-6 group  ${isMine ? 'justify-end' : 'justify-start'}`} onContextMenu={(e) => handleContext(e, String(m._id))}>
                 {!isMine && (
                   <Image
-                    src={m.avatar || `https://ui-avatars.com/api/?name=${m.username}`}
-                    alt={`${m.username} avatar`}
+                    src={senderAvatar}
+                    alt={`${senderUsername} avatar`}
                     width={36}
                     height={36}
                     className="w-9 h-9 rounded-full ring-2 ring-white shadow-sm"
@@ -115,8 +119,8 @@ export default function ChatWindow({ messages, activeUser, myId, onSend, onTypin
                 </div>
                 {isMine && (
                   <Image
-                    src={m.avatar || `https://ui-avatars.com/api/?name=${m.username}`}
-                    alt={`${m.username} avatar`}
+                    src={senderAvatar}
+                    alt={`${senderUsername} avatar`}
                     width={36}
                     height={36}
                     className="w-9 h-9 rounded-full ring-2 ring-white shadow-sm"

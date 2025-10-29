@@ -80,12 +80,12 @@ export default function ChatApp({ token, onLogout }: { token: string; onLogout: 
   };
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row gap-6 bg-transparent">
+    <div className="flex-1 flex flex-col lg:flex-row bg-transparent">
       <div className="chat-sidebar">
         <Sidebar users={users} meUsername={me} meId={myId} onSelect={selectUser} activeUser={activeUser} onLogout={onLogout} />
       </div>
       <div className="chat-window flex-1">
-        <ChatWindow messages={messages} activeUser={activeUser} myId={myId} onSend={sendMessage} onTyping={sendTyping} typingFrom={typingFrom} onDelete={handleDelete} />
+        <ChatWindow messages={messages} activeUser={activeUser} myId={myId} onSend={sendMessage} onTyping={sendTyping} typingFrom={typingFrom} onDelete={handleDelete} users={users} />
       </div>
     </div>
   );

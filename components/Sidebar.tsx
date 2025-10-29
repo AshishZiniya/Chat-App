@@ -27,7 +27,7 @@ export default function Sidebar({ users, meUsername, meId, onSelect, activeUser 
     .filter((u: User) => u.username.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <aside className="w-full md:w-80 bg-white border rounded-xl p-4 h-full flex flex-col shadow-sm" aria-label="Contacts and profile">
+    <aside className="w-full md:w-80 bg-white p-4 h-full flex flex-col shadow-sm" aria-label="Contacts and profile">
       <div className="mb-4">
         <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Search contacts</label>
         <div className="relative mb-6">

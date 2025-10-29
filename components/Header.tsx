@@ -11,8 +11,8 @@ export default function Header() {
     if (!showHeader) return null;
 
     return (
-        <header className="bg-white/90 backdrop-blur-md border-b border-gray-200/50 shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+        <header className="bg-white/90 backdrop-blur-md border-b shadow-sm">
+            <div className="max-w-8xl mx-auto px-4 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
                         <FaComments className="w-6 h-6 text-white" />

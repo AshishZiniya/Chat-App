@@ -30,7 +30,7 @@ export default function RootLayout({
                 <div className="app-shell">
                     <Header />
 
-                    <main className="app-main max-w-7xl mx-auto w-full px-4 py-6">
+                    <main className="app-main w-full">
                         {children}
                     </main>
                 </div>
