@@ -24,7 +24,7 @@ export default function Login({ onLogin, onShowRegister }: LoginProps) {
     setLoading(true);
 
     try {
-      const { data } = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}auth/login`, form);
+      const { data } = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, form);
       onLogin(data.accessToken);
     } catch (err: unknown) {
       const msg =
