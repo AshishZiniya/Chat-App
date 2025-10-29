@@ -112,7 +112,40 @@ export default function ChatWindow({ messages, activeUser, myId, onSend, onTypin
                   />
                 )}
                 <div className={`max-w-xs lg:max-w-md ${isMine ? 'bubble bubble--mine' : 'bubble bubble--their'}`}>
-                  <div className="text-sm leading-relaxed">{m.text}</div>
+                  {m.type === 'file' && m.fileUrl ? (
+                    <div>
+                      <a href={m.fileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                        📎 {m.fileName || 'File'}
+                      </a>
+                      {m.fileSize && <div className="text-xs text-gray-500">{(m.fileSize / 1024 / 1024).toFixed(2)} MB</div>}
+                    </div>
+                  ) : m.type === 'location' ? (
+                    <div>
+                      📍 Location: {m.latitude?.toFixed(4)}, {m.longitude?.toFixed(4)}
+                      {m.isLive && <span className="text-red-500 ml-1">🔴 Live</span>}
+                    </div>
+                  ) : m.type === 'emoji' ? (
+                    <div className="text-2xl">{m.text}</div>
+                  ) : m.type === 'gif' || m.type === 'sticker' ? (
+                    m.text ? (
+                      <div className="relative max-w-full h-auto">
+                        <Image src={m.text} alt={m.type} fill className="object-contain rounded" unoptimized />
+                      </div>
+                    ) : null
+                  ) : m.type === 'webview' ? (
+                    <div className="border rounded p-2 bg-white">
+                      {m.webImageUrl ? (
+                        <div className="relative w-full h-20 mb-2">
+                          <Image src={m.webImageUrl} alt="Preview" fill className="object-cover rounded" unoptimized />
+                        </div>
+                      ) : null}
+                      <div className="font-semibold text-sm">{m.webTitle}</div>
+                      <div className="text-xs text-gray-600">{m.webDescription}</div>
+                      <a href={m.webUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 text-xs hover:underline">{m.webUrl}</a>
+                    </div>
+                  ) : (
+                    <div className="text-sm leading-relaxed">{m.text}</div>
+                  )}
                   <div className={`text-xs mt-2 ${isMine ? 'text-blue-100' : 'text-gray-500'}`}>
                     {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>

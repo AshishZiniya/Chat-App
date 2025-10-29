@@ -65,8 +65,8 @@ export default function ChatApp({ token, onLogout }: { token: string; onLogout: 
     socketRef.current?.emit('get:conversation', { withUserId: user._id });
   };
 
-  const sendMessage = (to: string, text: string) => {
-    socketRef.current?.emit('message', { to, text });
+  const sendMessage = (to: string, text: string, type: string = 'text') => {
+    socketRef.current?.emit('message', { to, text, type });
   };
 
   const sendTyping = (to: string, typing: boolean) => {
