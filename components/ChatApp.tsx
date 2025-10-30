@@ -11,6 +11,7 @@ import type {
     MessageType,
     ChatState,
 } from '../types';
+import { LocalStorageKeys, WebSocketEvents, ApiEndpoints } from '../types';
 import { MessageType as MessageTypeEnum } from '../types';
 
 interface ChatAppProps {
@@ -34,28 +35,31 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
         isSearching: false,
     });
 
-    // Load activeUser and messages from localStorage on mount
+    // Load persisted data from localStorage on mount
     useEffect(() => {
-        const savedActiveUser = localStorage.getItem('activeUser');
-        const savedMessages = localStorage.getItem('chatMessages');
-
-        if (savedActiveUser) {
+        const loadPersistedData = () => {
             try {
-                const user = JSON.parse(savedActiveUser);
-                setChatState((prev) => ({ ...prev, activeUser: user }));
-            } catch {
-                localStorage.removeItem('activeUser');
-            }
-        }
+                const savedActiveUser = localStorage.getItem(LocalStorageKeys.ACTIVE_USER);
+                const savedMessages = localStorage.getItem(LocalStorageKeys.CHAT_MESSAGES);
 
-        if (savedMessages) {
-            try {
-                const messages = JSON.parse(savedMessages);
-                setChatState((prev) => ({ ...prev, messages }));
-            } catch {
-                localStorage.removeItem('chatMessages');
+                if (savedActiveUser) {
+                    const user = JSON.parse(savedActiveUser);
+                    setChatState((prev) => ({ ...prev, activeUser: user }));
+                }
+
+                if (savedMessages) {
+                    const messages = JSON.parse(savedMessages);
+                    setChatState((prev) => ({ ...prev, messages }));
+                }
+            } catch (error) {
+                console.error('Error loading persisted data:', error);
+                // Clear corrupted data
+                localStorage.removeItem(LocalStorageKeys.ACTIVE_USER);
+                localStorage.removeItem(LocalStorageKeys.CHAT_MESSAGES);
             }
-        }
+        };
+
+        loadPersistedData();
     }, []);
 
     const decoded = useMemo(
@@ -72,97 +76,91 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
         });
         socketRef.current = s;
 
-        s.on('connect', () => {
+        // WebSocket event handlers
+        const handleConnect = () => {
             console.log('connected', s.id);
             setChatState((prev) => ({
                 ...prev,
                 isConnected: true,
                 error: null,
             }));
-        });
+        };
 
-        s.on('disconnect', () => {
+        const handleDisconnect = () => {
             setChatState((prev) => ({ ...prev, isConnected: false }));
-        });
+        };
 
-        s.on('error', (error: { message: string }) => {
+        const handleError = (error: { message: string }) => {
             setChatState((prev) => ({ ...prev, error: error.message }));
-        });
+        };
 
-        s.on('users:updated', (list: User[]) => {
+        const handleUsersUpdated = (list: User[]) => {
             setChatState((prev) => ({ ...prev, users: list }));
-        });
+        };
 
-        s.on('message', (m: Message) => {
-            // if current chat matches, append; else mark pending (handled server)
+        const handleMessage = (m: Message) => {
             setChatState((prev) => {
-                // ensure not duplicate
-                if (
-                    prev.messages.find(
-                        (p: Message) => String(p._id) === String(m._id)
-                    )
-                )
+                // Check for duplicates
+                if (prev.messages.find((p: Message) => String(p._id) === String(m._id))) {
                     return prev;
+                }
+
                 const newMessages = [...prev.messages, m];
-                // Persist messages to localStorage
-                localStorage.setItem('chatMessages', JSON.stringify(newMessages));
+                localStorage.setItem(LocalStorageKeys.CHAT_MESSAGES, JSON.stringify(newMessages));
                 return { ...prev, messages: newMessages };
             });
-        });
+        };
 
-        s.on('conversation', (conv: Message[]) => {
+        const handleConversation = (conv: Message[]) => {
             setChatState((prev) => {
-                // Merge with existing messages to avoid duplicates and preserve local state
+                // Merge with existing messages to avoid duplicates
                 const existingIds = new Set(prev.messages.map(m => String(m._id)));
                 const newMessages = conv.filter(m => !existingIds.has(String(m._id)));
                 const allMessages = [...prev.messages, ...newMessages];
-                // Persist messages to localStorage
-                localStorage.setItem('chatMessages', JSON.stringify(allMessages));
+                localStorage.setItem(LocalStorageKeys.CHAT_MESSAGES, JSON.stringify(allMessages));
                 return { ...prev, messages: allMessages };
             });
-        });
+        };
 
-        s.on('messages:pending', (pending: Message[]) => {
-            // append pending messages
+        const handleMessagesPending = (pending: Message[]) => {
             setChatState((prev) => {
                 // Filter out duplicates
                 const existingIds = new Set(prev.messages.map(m => String(m._id)));
                 const newPendingMessages = pending.filter(m => !existingIds.has(String(m._id)));
                 const allMessages = [...prev.messages, ...newPendingMessages];
-                // Persist messages to localStorage
-                localStorage.setItem('chatMessages', JSON.stringify(allMessages));
-                return {
-                    ...prev,
-                    messages: allMessages,
-                };
+                localStorage.setItem(LocalStorageKeys.CHAT_MESSAGES, JSON.stringify(allMessages));
+                return { ...prev, messages: allMessages };
             });
-        });
+        };
 
-        s.on('message:deleted', (p: { id: string; deletedBy: string }) => {
+        const handleMessageDeleted = (p: { id: string; deletedBy: string }) => {
             setChatState((prev) => {
                 const updatedMessages = prev.messages.map((m) => {
                     if (String(m._id) !== String(p.id)) return m;
-                    return {
-                        ...m,
-                        deletedBy: [...(m.deletedBy || []), p.deletedBy],
-                    };
+                    return { ...m, deletedBy: [...(m.deletedBy || []), p.deletedBy] };
                 });
-                // Persist updated messages to localStorage
-                localStorage.setItem('chatMessages', JSON.stringify(updatedMessages));
-                return {
-                    ...prev,
-                    messages: updatedMessages,
-                };
+                localStorage.setItem(LocalStorageKeys.CHAT_MESSAGES, JSON.stringify(updatedMessages));
+                return { ...prev, messages: updatedMessages };
             });
-        });
+        };
 
-        s.on('typing', (p: TypingPayload) => {
-            // bubble to ChatWindow via state
+        const handleTyping = (p: TypingPayload) => {
             setChatState((prev) => ({ ...prev, typingUsers: [p] }));
             setTimeout(() => {
                 setChatState((prev) => ({ ...prev, typingUsers: [] }));
             }, 2000);
-        });
+        };
+
+        // Register event handlers
+        s.on(WebSocketEvents.USERS_UPDATED, handleUsersUpdated);
+        s.on(WebSocketEvents.MESSAGE, handleMessage);
+        s.on(WebSocketEvents.CONVERSATION, handleConversation);
+        s.on(WebSocketEvents.MESSAGES_PENDING, handleMessagesPending);
+        s.on(WebSocketEvents.MESSAGE_DELETED, handleMessageDeleted);
+        s.on(WebSocketEvents.TYPING, handleTyping);
+        s.on('connect', handleConnect);
+        s.on('disconnect', handleDisconnect);
+        s.on(WebSocketEvents.ERROR, handleError);
 
         return () => {
             s.disconnect();
@@ -178,38 +176,30 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
             searchQuery: '',
             searchResults: [],
         }));
-        // Save activeUser to localStorage
-        localStorage.setItem('activeUser', JSON.stringify(user));
-        // request conversation
-        socketRef.current?.emit('get:conversation', { withUserId: user._id });
+        // Persist active user to localStorage
+        localStorage.setItem(LocalStorageKeys.ACTIVE_USER, JSON.stringify(user));
+        // Request conversation from database
+        socketRef.current?.emit(WebSocketEvents.GET_CONVERSATION, { withUserId: user._id });
     }, []);
 
     const sendMessage = useCallback(
-        (
-            to: string,
-            text: string,
-            type: MessageType = MessageTypeEnum.TEXT
-        ) => {
-            socketRef.current?.emit('message', { to, text, type });
+        (to: string, text: string, type: MessageType = MessageTypeEnum.TEXT) => {
+            socketRef.current?.emit(WebSocketEvents.MESSAGE, { to, text, type });
         },
         []
     );
 
     const sendTyping = useCallback((to: string, typing: boolean) => {
-        socketRef.current?.emit('typing', { to, typing });
+        socketRef.current?.emit(WebSocketEvents.TYPING, { to, typing });
     }, []);
 
     const handleDelete = useCallback((id: string) => {
-        socketRef.current?.emit('delete:message', { id });
-        // optimistic UI: remove immediately
+        socketRef.current?.emit(WebSocketEvents.DELETE_MESSAGE, { id });
+        // Optimistic UI update: remove immediately from state and localStorage
         setChatState((prev) => {
             const updatedMessages = prev.messages.filter((m) => String(m._id) !== String(id));
-            // Persist updated messages to localStorage
-            localStorage.setItem('chatMessages', JSON.stringify(updatedMessages));
-            return {
-                ...prev,
-                messages: updatedMessages,
-            };
+            localStorage.setItem(LocalStorageKeys.CHAT_MESSAGES, JSON.stringify(updatedMessages));
+            return { ...prev, messages: updatedMessages };
         });
     }, []);
 
@@ -220,7 +210,7 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
 
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/messages/conversation?userA=${myId}&userB=${chatState.activeUser._id}&limit=50&skip=${chatState.messages.length}`,
+                `${process.env.NEXT_PUBLIC_API_URL}${ApiEndpoints.MESSAGES_CONVERSATION}?userA=${myId}&userB=${chatState.activeUser._id}&limit=50&skip=${chatState.messages.length}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -237,8 +227,7 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
 
             setChatState((prev) => {
                 const updatedMessages = [...newMessages, ...prev.messages];
-                // Persist updated messages to localStorage
-                localStorage.setItem('chatMessages', JSON.stringify(updatedMessages));
+                localStorage.setItem(LocalStorageKeys.CHAT_MESSAGES, JSON.stringify(updatedMessages));
                 return {
                     ...prev,
                     messages: updatedMessages,
@@ -266,7 +255,7 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
 
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/messages/conversation/search?userA=${myId}&userB=${chatState.activeUser._id}&query=${encodeURIComponent(query)}&limit=100`,
+                `${process.env.NEXT_PUBLIC_API_URL}${ApiEndpoints.MESSAGES_SEARCH}?userA=${myId}&userB=${chatState.activeUser._id}&query=${encodeURIComponent(query)}&limit=100`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -305,7 +294,7 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
 
             try {
                 const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/messages/upload`,
+                    `${process.env.NEXT_PUBLIC_API_URL}${ApiEndpoints.MESSAGES_UPLOAD}`,
                     {
                         method: 'POST',
                         headers: {
@@ -321,7 +310,7 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
 
                 const result = await response.json();
                 // Emit the file message via socket
-                socketRef.current?.emit('message', {
+                socketRef.current?.emit(WebSocketEvents.MESSAGE, {
                     to,
                     text: result.message.fileUrl,
                     type: 'file',

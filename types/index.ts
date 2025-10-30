@@ -74,6 +74,29 @@ export interface ChatState {
   isSearching: boolean;
 }
 
+export const LocalStorageKeys = {
+  ACTIVE_USER: 'activeUser',
+  CHAT_MESSAGES: 'chatMessages',
+} as const;
+
+export const WebSocketEvents = {
+  USERS_UPDATED: 'users:updated',
+  MESSAGE: 'message',
+  CONVERSATION: 'conversation',
+  MESSAGES_PENDING: 'messages:pending',
+  MESSAGE_DELETED: 'message:deleted',
+  TYPING: 'typing',
+  GET_CONVERSATION: 'get:conversation',
+  DELETE_MESSAGE: 'delete:message',
+  ERROR: 'error',
+} as const;
+
+export const ApiEndpoints = {
+  MESSAGES_CONVERSATION: '/messages/conversation',
+  MESSAGES_SEARCH: '/messages/conversation/search',
+  MESSAGES_UPLOAD: '/messages/upload',
+} as const;
+
 export interface MessageInput {
     to: string;
     text: string;

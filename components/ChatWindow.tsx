@@ -90,7 +90,7 @@ export default function ChatWindow({
         onSearch('');
     }, [onSearch]);
 
-    const handleSend = useCallback(
+    const handleSendMessage = useCallback(
         (e?: React.FormEvent) => {
             e?.preventDefault();
             if (!text.trim() || !activeUser) return;
@@ -100,12 +100,12 @@ export default function ChatWindow({
         [text, activeUser, onSend]
     );
 
-    const handleEmojiSelect = useCallback((emoji: string) => {
+    const handleEmojiSelection = useCallback((emoji: string) => {
         setText((prev) => prev + emoji);
         setPickerType(null);
     }, []);
 
-    const handleGifSelect = useCallback(
+    const handleGifSelection = useCallback(
         (gifUrl: string) => {
             if (!gifUrl || !activeUser) return;
             onSend(activeUser._id, gifUrl, MessageType.GIF);
@@ -114,7 +114,7 @@ export default function ChatWindow({
         [activeUser, onSend]
     );
 
-    const handleStickerSelect = useCallback(
+    const handleStickerSelection = useCallback(
         (stickerUrl: string) => {
             if (!stickerUrl || !activeUser) return;
             onSend(activeUser._id, stickerUrl, MessageType.STICKER);
@@ -123,7 +123,7 @@ export default function ChatWindow({
         [activeUser, onSend]
     );
 
-    const handleFileSelect = useCallback(
+    const handleFileSelection = useCallback(
         async (event: React.ChangeEvent<HTMLInputElement>) => {
             const file = event.target.files?.[0];
             if (!file || !activeUser) return;
@@ -492,7 +492,7 @@ export default function ChatWindow({
 
             {/* Input */}
             <div className="border-t border-gray-200 bg-white relative p-4">
-                <form onSubmit={handleSend} className="flex items-center gap-2">
+                <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                     <button
                         type="button"
                         onClick={() =>
@@ -536,7 +536,7 @@ export default function ChatWindow({
                         <FaFile />
                         <input
                             type="file"
-                            onChange={handleFileSelect}
+                            onChange={handleFileSelection}
                             className="hidden"
                             accept="image/*,video/*,audio/*,application/*,text/*"
                         />
@@ -565,21 +565,21 @@ export default function ChatWindow({
                     <div className="absolute bottom-16 left-4 z-50 bg-white shadow-lg rounded-xl p-2">
                         {pickerType === MessageType.EMOJI && (
                             <EmojiPickerComponent
-                                onEmojiSelect={handleEmojiSelect}
+                                onEmojiSelect={handleEmojiSelection}
                                 isOpen
                                 onClose={() => setPickerType(null)}
                             />
                         )}
                         {pickerType === MessageType.GIF && (
                             <GifPickerComponent
-                                onGifSelect={handleGifSelect}
+                                onGifSelect={handleGifSelection}
                                 isOpen
                                 onClose={() => setPickerType(null)}
                             />
                         )}
                         {pickerType === MessageType.STICKER && (
                             <StickerPickerComponent
-                                onStickerSelect={handleStickerSelect}
+                                onStickerSelect={handleStickerSelection}
                                 isOpen
                                 onClose={() => setPickerType(null)}
                             />
