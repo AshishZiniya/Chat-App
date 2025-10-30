@@ -61,12 +61,17 @@ export interface ApiError {
 }
 
 export interface ChatState {
-    messages: Message[];
-    activeUser: User | null;
-    users: User[];
-    typingUsers: TypingPayload[];
-    isConnected: boolean;
-    error: string | null;
+  messages: Message[];
+  activeUser: User | null;
+  users: User[];
+  typingUsers: TypingPayload[];
+  isConnected: boolean;
+  error: string | null;
+  isLoadingMore: boolean;
+  hasMoreMessages: boolean;
+  searchQuery: string;
+  searchResults: Message[];
+  isSearching: boolean;
 }
 
 export interface MessageInput {

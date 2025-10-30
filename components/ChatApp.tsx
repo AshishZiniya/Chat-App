@@ -27,17 +27,33 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
         typingUsers: [],
         isConnected: false,
         error: null,
+        isLoadingMore: false,
+        hasMoreMessages: true,
+        searchQuery: '',
+        searchResults: [],
+        isSearching: false,
     });
 
-    // Load activeUser from localStorage on mount
+    // Load activeUser and messages from localStorage on mount
     useEffect(() => {
         const savedActiveUser = localStorage.getItem('activeUser');
+        const savedMessages = localStorage.getItem('chatMessages');
+
         if (savedActiveUser) {
             try {
                 const user = JSON.parse(savedActiveUser);
                 setChatState((prev) => ({ ...prev, activeUser: user }));
             } catch {
                 localStorage.removeItem('activeUser');
+            }
+        }
+
+        if (savedMessages) {
+            try {
+                const messages = JSON.parse(savedMessages);
+                setChatState((prev) => ({ ...prev, messages }));
+            } catch {
+                localStorage.removeItem('chatMessages');
             }
         }
     }, []);
@@ -87,33 +103,50 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
                     )
                 )
                     return prev;
-                return { ...prev, messages: [...prev.messages, m] };
+                const newMessages = [...prev.messages, m];
+                // Persist messages to localStorage
+                localStorage.setItem('chatMessages', JSON.stringify(newMessages));
+                return { ...prev, messages: newMessages };
             });
         });
 
         s.on('conversation', (conv: Message[]) => {
-            setChatState((prev) => ({ ...prev, messages: conv }));
+            setChatState((prev) => {
+                // Persist messages to localStorage
+                localStorage.setItem('chatMessages', JSON.stringify(conv));
+                return { ...prev, messages: conv };
+            });
         });
 
         s.on('messages:pending', (pending: Message[]) => {
             // append pending messages
-            setChatState((prev) => ({
-                ...prev,
-                messages: [...prev.messages, ...pending],
-            }));
+            setChatState((prev) => {
+                const newMessages = [...prev.messages, ...pending];
+                // Persist messages to localStorage
+                localStorage.setItem('chatMessages', JSON.stringify(newMessages));
+                return {
+                    ...prev,
+                    messages: newMessages,
+                };
+            });
         });
 
         s.on('message:deleted', (p: { id: string; deletedBy: string }) => {
-            setChatState((prev) => ({
-                ...prev,
-                messages: prev.messages.map((m) => {
+            setChatState((prev) => {
+                const newMessages = prev.messages.map((m) => {
                     if (String(m._id) !== String(p.id)) return m;
                     return {
                         ...m,
                         deletedBy: [...(m.deletedBy || []), p.deletedBy],
                     };
-                }),
-            }));
+                });
+                // Persist messages to localStorage
+                localStorage.setItem('chatMessages', JSON.stringify(newMessages));
+                return {
+                    ...prev,
+                    messages: newMessages,
+                };
+            });
         });
 
         s.on('typing', (p: TypingPayload) => {
@@ -130,7 +163,14 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
     }, [token]);
 
     const selectUser = useCallback((user: User) => {
-        setChatState((prev) => ({ ...prev, activeUser: user }));
+        setChatState((prev) => ({
+            ...prev,
+            activeUser: user,
+            messages: [],
+            hasMoreMessages: true,
+            searchQuery: '',
+            searchResults: [],
+        }));
         // Save activeUser to localStorage
         localStorage.setItem('activeUser', JSON.stringify(user));
         // request conversation
@@ -155,11 +195,99 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
     const handleDelete = useCallback((id: string) => {
         socketRef.current?.emit('delete:message', { id });
         // optimistic UI: remove immediately
-        setChatState((prev) => ({
-            ...prev,
-            messages: prev.messages.filter((m) => String(m._id) !== String(id)),
-        }));
+        setChatState((prev) => {
+            const newMessages = prev.messages.filter((m) => String(m._id) !== String(id));
+            // Persist messages to localStorage
+            localStorage.setItem('chatMessages', JSON.stringify(newMessages));
+            return {
+                ...prev,
+                messages: newMessages,
+            };
+        });
     }, []);
+
+    const loadMoreMessages = useCallback(async () => {
+        if (!chatState.activeUser || !chatState.hasMoreMessages || chatState.isLoadingMore) return;
+
+        setChatState((prev) => ({ ...prev, isLoadingMore: true }));
+
+        try {
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/messages/conversation?userA=${myId}&userB=${chatState.activeUser._id}&limit=50&skip=${chatState.messages.length}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to load more messages');
+            }
+
+            const result = await response.json();
+            const newMessages = result.messages;
+
+            setChatState((prev) => {
+                const updatedMessages = [...newMessages, ...prev.messages];
+                // Persist messages to localStorage
+                localStorage.setItem('chatMessages', JSON.stringify(updatedMessages));
+                return {
+                    ...prev,
+                    messages: updatedMessages,
+                    hasMoreMessages: newMessages.length === 50,
+                    isLoadingMore: false,
+                };
+            });
+        } catch (error) {
+            console.error('Load more messages error:', error);
+            setChatState((prev) => ({
+                ...prev,
+                error: 'Failed to load more messages',
+                isLoadingMore: false,
+            }));
+        }
+    }, [chatState.activeUser, chatState.hasMoreMessages, chatState.isLoadingMore, chatState.messages.length, myId, token]);
+
+    const searchMessages = useCallback(async (query: string) => {
+        if (!chatState.activeUser || !query.trim()) {
+            setChatState((prev) => ({ ...prev, searchQuery: '', searchResults: [] }));
+            return;
+        }
+
+        setChatState((prev) => ({ ...prev, isSearching: true }));
+
+        try {
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/messages/conversation/search?userA=${myId}&userB=${chatState.activeUser._id}&query=${encodeURIComponent(query)}&limit=100`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Search failed');
+            }
+
+            const result = await response.json();
+
+            setChatState((prev) => ({
+                ...prev,
+                searchQuery: query,
+                searchResults: result.messages,
+                isSearching: false,
+            }));
+        } catch (error) {
+            console.error('Search error:', error);
+            setChatState((prev) => ({
+                ...prev,
+                error: 'Failed to search messages',
+                isSearching: false,
+            }));
+        }
+    }, [chatState.activeUser, myId, token]);
 
     const handleFileUpload = useCallback(
         async (file: File, to: string) => {
@@ -228,6 +356,13 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
                     onDelete={handleDelete}
                     onFileUpload={handleFileUpload}
                     users={chatState.users}
+                    onLoadMore={loadMoreMessages}
+                    isLoadingMore={chatState.isLoadingMore}
+                    hasMoreMessages={chatState.hasMoreMessages}
+                    onSearch={searchMessages}
+                    searchQuery={chatState.searchQuery}
+                    searchResults={chatState.searchResults}
+                    isSearching={chatState.isSearching}
                 />
             </div>
         </div>

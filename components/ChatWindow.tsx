@@ -26,6 +26,13 @@ interface ChatWindowProps {
     onDelete: (id: string) => void;
     onFileUpload: (file: File, to: string) => Promise<void>;
     users: User[];
+    onLoadMore: () => void;
+    isLoadingMore: boolean;
+    hasMoreMessages: boolean;
+    onSearch: (query: string) => void;
+    searchQuery: string;
+    searchResults: Message[];
+    isSearching: boolean;
 }
 
 export default function ChatWindow({
@@ -38,10 +45,19 @@ export default function ChatWindow({
     onDelete,
     onFileUpload,
     users,
+    onLoadMore,
+    isLoadingMore,
+    hasMoreMessages,
+    onSearch,
+    searchQuery,
+    searchResults,
+    isSearching,
 }: ChatWindowProps) {
     const [text, setText] = useState('');
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const [pickerType, setPickerType] = useState<MessageType | null>(null);
+    const [searchInput, setSearchInput] = useState('');
+    const [showSearch, setShowSearch] = useState(false);
 
     // auto-scroll
     useEffect(() => {
@@ -50,6 +66,29 @@ export default function ChatWindow({
             behavior: 'smooth',
         });
     }, [messages, activeUser]);
+
+    // Infinite scroll handler
+    const handleScroll = useCallback(() => {
+        if (!scrollRef.current || !hasMoreMessages || isLoadingMore) return;
+
+        const { scrollTop } = scrollRef.current;
+        if (scrollTop === 0) {
+            onLoadMore();
+        }
+    }, [hasMoreMessages, isLoadingMore, onLoadMore]);
+
+    // Search handler
+    const handleSearch = useCallback((query: string) => {
+        setSearchInput(query);
+        onSearch(query);
+    }, [onSearch]);
+
+    // Clear search
+    const clearSearch = useCallback(() => {
+        setSearchInput('');
+        setShowSearch(false);
+        onSearch('');
+    }, [onSearch]);
 
     const handleSend = useCallback(
         (e?: React.FormEvent) => {
@@ -149,14 +188,65 @@ export default function ChatWindow({
                         {activeUser.online ? 'Active now' : 'Offline'}
                     </div>
                 </div>
+                <button
+                    onClick={() => setShowSearch(!showSearch)}
+                    className="text-gray-500 hover:text-blue-500 p-2"
+                    title="Search messages"
+                >
+                    <FaComments />
+                </button>
             </div>
+
+            {/* Search Bar */}
+            {showSearch && (
+                <div className="border-b border-gray-200 p-4 bg-gray-50">
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={searchInput}
+                            onChange={(e) => handleSearch(e.target.value)}
+                            placeholder="Search messages..."
+                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <button
+                            onClick={clearSearch}
+                            className="text-gray-500 hover:text-red-500 px-3 py-2"
+                            title="Clear search"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                    {isSearching && (
+                        <div className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+                            Searching...
+                        </div>
+                    )}
+                    {searchQuery && !isSearching && (
+                        <div className="text-sm text-gray-600 mt-2">
+                            Found {searchResults.length} results for &#34;{searchQuery}&#34;
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Messages */}
             <div
                 ref={scrollRef}
                 className="flex-1 overflow-auto p-6 bg-gray-50/30 relative"
+                onScroll={handleScroll}
             >
-                {messages
+                {/* Loading indicator */}
+                {isLoadingMore && (
+                    <div className="text-center py-4">
+                        <div className="inline-flex items-center gap-2 text-gray-500">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                            Loading more messages...
+                        </div>
+                    </div>
+                )}
+
+                {(searchQuery ? searchResults : messages)
                     .filter(
                         (m) =>
                             m.from === activeUser._id || m.to === activeUser._id
@@ -248,19 +338,55 @@ export default function ChatWindow({
                                         <div className="text-sm">
                                             {m.fileType?.startsWith('image/') &&
                                             (m.fileUrl || m.text) ? (
-                                                <Image
-                                                    src={(m.fileUrl || m.text)!}
-                                                    alt={m.fileName || 'File'}
-                                                    width={200}
-                                                    height={200}
-                                                    className="rounded max-w-full h-auto"
-                                                    unoptimized
-                                                />
+                                                <div className="relative group">
+                                                    <Image
+                                                        src={(m.fileUrl || m.text)!}
+                                                        alt={m.fileName || 'File'}
+                                                        width={200}
+                                                        height={200}
+                                                        className="rounded max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+                                                        unoptimized
+                                                        onClick={() => window.open((m.fileUrl || m.text)!, '_blank')}
+                                                    />
+                                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded flex items-center justify-center">
+                                                        <span className="text-white opacity-0 group-hover:opacity-100 text-sm">Click to view full size</span>
+                                                    </div>
+                                                </div>
+                                            ) : m.fileType?.startsWith('video/') &&
+                                              (m.fileUrl || m.text) ? (
+                                                <div className="max-w-xs">
+                                                    <video
+                                                        src={(m.fileUrl || m.text)!}
+                                                        controls
+                                                        className="rounded max-w-full h-auto"
+                                                        preload="metadata"
+                                                    >
+                                                        Your browser does not support the video tag.
+                                                    </video>
+                                                    <div className="mt-1 text-xs text-gray-500">
+                                                        {m.fileName}
+                                                    </div>
+                                                </div>
+                                            ) : m.fileType?.startsWith('audio/') &&
+                                              (m.fileUrl || m.text) ? (
+                                                <div className="max-w-xs">
+                                                    <audio
+                                                        src={(m.fileUrl || m.text)!}
+                                                        controls
+                                                        className="w-full"
+                                                    >
+                                                        Your browser does not support the audio element.
+                                                    </audio>
+                                                    <div className="mt-1 text-xs text-gray-500">
+                                                        {m.fileName}
+                                                    </div>
+                                                </div>
                                             ) : (
-                                                <div className="flex items-center gap-2">
-                                                    <FaFile className="text-gray-500" />
-                                                    <div>
-                                                        <div className="font-medium">
+                                                <div className="flex items-center gap-2 p-3 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors"
+                                                     onClick={() => (m.fileUrl || m.text) && window.open((m.fileUrl || m.text)!, '_blank')}>
+                                                    <FaFile className="text-gray-500 text-lg" />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="font-medium truncate">
                                                             {m.fileName}
                                                         </div>
                                                         <div className="text-xs opacity-75">
