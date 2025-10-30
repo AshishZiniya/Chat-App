@@ -30,9 +30,7 @@ export default function RootLayout({
                 <div className="app-shell">
                     <Header />
 
-                    <main className="app-main w-full">
-                        {children}
-                    </main>
+                    <main className="app-main w-full">{children}</main>
                 </div>
             </body>
         </html>
