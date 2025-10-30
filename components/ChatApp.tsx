@@ -133,14 +133,21 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
             });
         };
 
-        const handleMessageDeleted = (p: { id: string; deletedBy: string }) => {
+        const handleMessageDeleted = (p: { id: string; deletedBy: string; conversationId?: string }) => {
             setChatState((prev) => {
-                const updatedMessages = prev.messages.map((m) => {
-                    if (String(m._id) !== String(p.id)) return m;
-                    return { ...m, deletedBy: [...(m.deletedBy || []), p.deletedBy] };
-                });
+                // Remove the deleted message from state and localStorage
+                const updatedMessages = prev.messages.filter((m) => String(m._id) !== String(p.id));
+
+                // Also remove from search results if present
+                const updatedSearchResults = prev.searchResults.filter((m) => String(m._id) !== String(p.id));
+
                 localStorage.setItem(LocalStorageKeys.CHAT_MESSAGES, JSON.stringify(updatedMessages));
-                return { ...prev, messages: updatedMessages };
+
+                return {
+                    ...prev,
+                    messages: updatedMessages,
+                    searchResults: updatedSearchResults,
+                };
             });
         };
 
@@ -269,10 +276,16 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
 
             const result = await response.json();
 
+            // Filter out any messages that have been deleted locally
+            const localMessageIds = new Set(chatState.messages.map(m => String(m._id)));
+            const filteredResults = result.messages.filter((msg: Message) =>
+                localMessageIds.has(String(msg._id))
+            );
+
             setChatState((prev) => ({
                 ...prev,
                 searchQuery: query,
-                searchResults: result.messages,
+                searchResults: filteredResults,
                 isSearching: false,
             }));
         } catch (error) {
@@ -283,7 +296,7 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
                 isSearching: false,
             }));
         }
-    }, [chatState.activeUser, myId, token]);
+    }, [chatState.activeUser, chatState.messages, myId, token]);
 
     const handleFileUpload = useCallback(
         async (file: File, to: string) => {
