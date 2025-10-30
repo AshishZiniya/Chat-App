@@ -2,29 +2,26 @@
 import React from 'react';
 import Image from 'next/image';
 import { FaSearch, FaUsers, FaCheck } from 'react-icons/fa';
+import type { User } from '../types';
 
-type User = {
-  _id: string;
-  username: string;
-  avatar?: string;
-  online?: boolean;
-};
-
-type SidebarProps = {
+interface SidebarProps {
   users: User[];
   meUsername: string;
   meId?: string;
   onSelect: (user: User) => void;
   activeUser?: User | null;
   onLogout: () => void;
-};
+}
 
 export default function Sidebar({ users, meUsername, meId, onSelect, activeUser }: SidebarProps) {
   const [searchTerm, setSearchTerm] = React.useState('');
 
-  const filteredUsers = users
-    .filter((u: User) => (meId ? u._id !== meId : u.username !== meUsername))
-    .filter((u: User) => u.username.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredUsers = React.useMemo(() =>
+    users
+      .filter((u: User) => (meId ? u._id !== meId : u.username !== meUsername))
+      .filter((u: User) => u.username.toLowerCase().includes(searchTerm.toLowerCase())),
+    [users, meId, meUsername, searchTerm]
+  );
 
   return (
     <aside className="w-full md:w-80 bg-white p-4 h-full flex flex-col shadow-sm" aria-label="Contacts and profile">

@@ -1,60 +1,89 @@
-
 'use client';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Image from 'next/image';
 import type { User, Message, TypingPayload } from '../types';
-import { FaComments, FaTrash, FaTimes, FaPaperPlane } from 'react-icons/fa';
+import { MessageType } from '../types';
+import {
+  FaComments,
+  FaPaperPlane,
+  FaSmile,
+  FaImage,
+  FaStickyNote,
+  FaTrash,
+} from 'react-icons/fa';
+import EmojiPickerComponent from './EmojiPicker';
+import GifPickerComponent from './GifPicker';
+import StickerPickerComponent from './StickerPicker';
 
-export default function ChatWindow({ messages, activeUser, myId, onSend, onTyping, typingFrom, onDelete, users }: {
+interface ChatWindowProps {
   messages: Message[];
   activeUser: User | null;
   myId: string;
-  onSend: (to: string, text: string) => void;
+  onSend: (to: string, text: string, type?: MessageType) => void;
   onTyping: (to: string, typing: boolean) => void;
   typingFrom: TypingPayload | null;
   onDelete: (id: string) => void;
   users: User[];
-}) {
+}
+
+export default function ChatWindow({
+  messages,
+  activeUser,
+  myId,
+  onSend,
+  onTyping,
+  typingFrom,
+  onDelete,
+  users,
+}: ChatWindowProps) {
   const [text, setText] = useState('');
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number; id?: string }>({ visible: false, x: 0, y: 0 });
+  const [pickerType, setPickerType] = useState<MessageType | null>(null);
 
-  useEffect(()=> {
+  // auto-scroll
+  useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, activeUser]);
 
-  if (!activeUser) return (
-    <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-      <div className="w-20 h-20 bg-linear-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-6">
-        <FaComments className="w-10 h-10 text-blue-500" />
-      </div>
-      <h3 className="text-xl font-semibold text-gray-900 mb-2">Select a conversation</h3>
-      <p className="text-gray-600 max-w-sm">Choose a contact from the sidebar to start chatting</p>
-    </div>
-  );
-
-  const handleContext = (e: React.MouseEvent, id: string) => {
-    e.preventDefault();
-    setContextMenu({ visible: true, x: e.clientX, y: e.clientY, id });
-  };
-
-  const closeContext = () => setContextMenu({ visible: false, x: 0, y: 0 });
-
-  const handleDelete = (id?: string) => {
-    if (!id) return;
-    onDelete(id);
-    closeContext();
-  };
-
-  const handleSend = (e?:React.FormEvent) => {
+  const handleSend = useCallback((e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!text.trim()) return;
-    onSend(activeUser._id, text.trim());
+    if (!text.trim() || !activeUser) return;
+    onSend(activeUser._id, text.trim(), MessageType.TEXT);
     setText('');
-  };
+  }, [text, activeUser, onSend]);
+
+  const handleEmojiSelect = useCallback((emoji: string) => {
+    setText((prev) => prev + emoji);
+    setPickerType(null);
+  }, []);
+
+  const handleGifSelect = useCallback((gifUrl: string) => {
+    if (!gifUrl || !activeUser) return;
+    onSend(activeUser._id, gifUrl, MessageType.GIF);
+    setPickerType(null);
+  }, [activeUser, onSend]);
+
+  const handleStickerSelect = useCallback((stickerUrl: string) => {
+    if (!stickerUrl || !activeUser) return;
+    onSend(activeUser._id, stickerUrl, MessageType.STICKER);
+    setPickerType(null);
+  }, [activeUser, onSend]);
+
+  // no active user
+  if (!activeUser)
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+        <div className="w-20 h-20 bg-linear-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-6">
+          <FaComments className="w-10 h-10 text-blue-500" />
+        </div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">Select a conversation</h3>
+        <p className="text-gray-600 max-w-sm">Choose a contact from the sidebar to start chatting</p>
+      </div>
+    );
 
   return (
-    <div className="flex flex-col h-full bg-white shadow-sm border-l">
+    <div className="flex flex-col h-full bg-white shadow-sm border-l relative">
+      {/* Header */}
       <div className="border-b border-gray-200 p-4 flex items-center gap-4 bg-linear-to-r from-white to-gray-50">
         <div className="relative">
           <Image
@@ -65,89 +94,104 @@ export default function ChatWindow({ messages, activeUser, myId, onSend, onTypin
             className="w-12 h-12 rounded-full ring-2 ring-gray-100"
             unoptimized
           />
-          <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white ${activeUser.online ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+          <span
+            className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white ${
+              activeUser.online ? 'bg-green-500' : 'bg-gray-400'
+            }`}
+          ></span>
         </div>
         <div className="flex-1">
           <div className="font-semibold text-gray-900">{activeUser.username}</div>
-          <div className={`text-sm flex items-center gap-1.5 ${activeUser.online ? 'text-green-600' : 'text-gray-500'}`}>
+          <div
+            className={`text-sm flex items-center gap-1.5 ${
+              activeUser.online ? 'text-green-600' : 'text-gray-500'
+            }`}
+          >
             <div className={`w-2 h-2 rounded-full ${activeUser.online ? 'bg-green-500' : 'bg-gray-400'}`}></div>
             {activeUser.online ? 'Active now' : 'Offline'}
           </div>
         </div>
       </div>
-      <div className="flex-1 overflow-auto p-6 bg-gray-50/30" ref={scrollRef} role="log" aria-live="polite">
+
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 overflow-auto p-6 bg-gray-50/30 relative">
         {messages
-          .filter((m) => {
-            if (!activeUser) return true;
-            // Check if message is part of current conversation
-            const isInConversation = m.from === activeUser._id || m.to === activeUser._id;
-            if (!isInConversation) return false;
-
-            // Check if message is deleted
-            if (!m.deletedBy?.length) return true;
-
-            // If sender deleted, hide from both
-            if (m.deletedBy.includes(m.from)) return false;
-
-            // If receiver deleted, only hide from receiver
-            if (m.from !== myId && m.deletedBy.includes(myId)) return false;
-
-            return true;
-          })
+          .filter((m) => m.from === activeUser._id || m.to === activeUser._id)
           .map((m, idx) => {
             const isMine = m.from === myId;
-            const sender = users.find(u => u._id === m.from);
-            const senderAvatar = sender?.avatar || `https://ui-avatars.com/api/?name=${sender?.username || m.username}`;
-            const senderUsername = sender?.username || m.username;
+            const sender = users.find((u) => u._id === (typeof m.from === 'string' ? m.from : m.from._id));
+            const senderAvatar =
+              sender?.avatar || `https://ui-avatars.com/api/?name=${sender?.username || (typeof m.from === 'object' ? m.from.username : 'Unknown')}`;
+            const senderUsername = sender?.username || (typeof m.from === 'object' ? m.from.username : 'Unknown');
             return (
-              <div key={String(m._id) + idx} className={`flex items-end gap-3 mb-6 group  ${isMine ? 'justify-end' : 'justify-start'}`} onContextMenu={(e) => handleContext(e, String(m._id))}>
+              <div
+                key={String(m._id) + idx}
+                className={`flex items-end gap-3 mb-6 ${isMine ? 'justify-end' : 'justify-start'}`}
+              >
                 {!isMine && (
                   <Image
                     src={senderAvatar}
                     alt={`${senderUsername} avatar`}
                     width={36}
                     height={36}
-                    className="w-9 h-9 rounded-full ring-2 ring-white shadow-sm"
+                    className="w-9 h-9 rounded-full ring-2 ring-white shadow-sm shrink-0"
                     unoptimized
                   />
                 )}
-                <div className={`max-w-xs lg:max-w-md ${isMine ? 'bubble bubble--mine' : 'bubble bubble--their'}`}>
-                  {m.type === 'file' && m.fileUrl ? (
-                    <div>
-                      <a href={m.fileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                        📎 {m.fileName || 'File'}
-                      </a>
-                      {m.fileSize && <div className="text-xs text-gray-500">{(m.fileSize / 1024 / 1024).toFixed(2)} MB</div>}
-                    </div>
-                  ) : m.type === 'location' ? (
-                    <div>
-                      📍 Location: {m.latitude?.toFixed(4)}, {m.longitude?.toFixed(4)}
-                      {m.isLive && <span className="text-red-500 ml-1">🔴 Live</span>}
-                    </div>
-                  ) : m.type === 'emoji' ? (
-                    <div className="text-2xl">{m.text}</div>
-                  ) : m.type === 'gif' || m.type === 'sticker' ? (
+                <div
+                  className={`max-w-xs lg:max-w-md rounded-2xl px-4 py-2 relative group ${
+                    isMine ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'
+                  }`}
+                >
+                  {m.type === MessageType.GIF || m.type === MessageType.STICKER ? (
                     m.text ? (
-                      <div className="relative max-w-full h-auto">
-                        <Image src={m.text} alt={m.type} fill className="object-contain rounded" unoptimized />
-                      </div>
+                      <Image
+                        src={m.text}
+                        alt={m.type}
+                        width={200}
+                        height={200}
+                        className="rounded max-w-full h-auto"
+                        unoptimized
+                      />
                     ) : null
-                  ) : m.type === 'webview' ? (
-                    <div className="border rounded p-2 bg-white">
-                      {m.webImageUrl ? (
-                        <div className="relative w-full h-20 mb-2">
-                          <Image src={m.webImageUrl} alt="Preview" fill className="object-cover rounded" unoptimized />
-                        </div>
-                      ) : null}
-                      <div className="font-semibold text-sm">{m.webTitle}</div>
-                      <div className="text-xs text-gray-600">{m.webDescription}</div>
-                      <a href={m.webUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 text-xs hover:underline">{m.webUrl}</a>
+                  ) : m.type === MessageType.EMOJI ? (
+                    <span className="text-2xl">{m.text}</span>
+                  ) : m.type === MessageType.LOCATION ? (
+                    <div className="text-sm">
+                      📍 Location: {m.latitude?.toFixed(4)}, {m.longitude?.toFixed(4)}
+                    </div>
+                  ) : m.type === MessageType.WEBVIEW ? (
+                    <div className="text-sm">
+                      <div className="font-medium">{m.webTitle}</div>
+                      <div className="text-xs opacity-75">{m.webDescription}</div>
+                      {m.webImageUrl && (
+                        <Image
+                          src={m.webImageUrl}
+                          alt={m.webTitle || 'Web preview'}
+                          width={200}
+                          height={150}
+                          className="rounded mt-2 max-w-full h-auto"
+                          unoptimized
+                        />
+                      )}
                     </div>
                   ) : (
-                    <div className="text-sm leading-relaxed">{m.text}</div>
+                    <p className="whitespace-pre-wrap wrap-break-word">{m.text || ''}</p>
                   )}
-                  <div className={`text-xs mt-2 ${isMine ? 'text-blue-100' : 'text-gray-500'}`}>
-                    {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+
+                  <div className="text-xs mt-1 text-right flex items-center justify-end gap-1">
+                    <span className={isMine ? 'text-blue-200' : 'text-gray-400'}>
+                      {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    {isMine && (
+                      <button
+                        onClick={() => onDelete(String(m._id))}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-xs hover:text-red-500 text-gray-400"
+                        title="Delete message"
+                      >
+                        <FaTrash />
+                      </button>
+                    )}
                   </div>
                 </div>
                 {isMine && (
@@ -156,7 +200,7 @@ export default function ChatWindow({ messages, activeUser, myId, onSend, onTypin
                     alt={`${senderUsername} avatar`}
                     width={36}
                     height={36}
-                    className="w-9 h-9 rounded-full ring-2 ring-white shadow-sm"
+                    className="w-9 h-9 rounded-full ring-2 ring-white shadow-sm shrink-0"
                     unoptimized
                   />
                 )}
@@ -164,34 +208,8 @@ export default function ChatWindow({ messages, activeUser, myId, onSend, onTypin
             );
           })}
 
-        {messages.filter((m) => {
-          const isInConversation = m.from === activeUser._id || m.to === activeUser._id;
-          return isInConversation && !m.deletedBy?.length;
-        }).length === 0 && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-linear-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FaComments className="w-8 h-8 text-blue-500" />
-            </div>
-            <h4 className="text-lg font-semibold text-gray-900 mb-2">Start a conversation</h4>
-            <p className="text-gray-600">Send your first message to {activeUser.username}</p>
-          </div>
-        )}
-
-        {contextMenu.visible && (
-          <div
-            className="fixed context-menu z-50"
-            style={{ top: contextMenu.y, left: contextMenu.x }}
-            onMouseLeave={closeContext}
-          >
-            <button className="flex items-center gap-2 px-4 py-3 text-sm hover:bg-red-50 w-full text-left text-red-600" onClick={() => handleDelete(contextMenu.id)}>
-              <FaTrash className="w-4 h-4" />
-              Delete message
-            </button>
-          </div>
-        )}
-
         {typingFrom && typingFrom.from === activeUser._id && (
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-2 mt-4">
             <div className="flex space-x-1">
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
               <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
@@ -202,38 +220,68 @@ export default function ChatWindow({ messages, activeUser, myId, onSend, onTypin
         )}
       </div>
 
-      <form onSubmit={handleSend} className="p-6 border-t border-gray-200 bg-white flex items-end gap-3">
-        <div className="flex-1 relative">
+      {/* Input */}
+      <div className="border-t border-gray-200 bg-white relative p-4">
+        <form onSubmit={handleSend} className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPickerType(pickerType === MessageType.EMOJI ? null : MessageType.EMOJI)}
+            className="text-gray-500 hover:text-blue-500"
+          >
+            <FaSmile />
+          </button>
+          <button
+            type="button"
+            onClick={() => setPickerType(pickerType === MessageType.GIF ? null : MessageType.GIF)}
+            className="text-gray-500 hover:text-blue-500"
+          >
+            <FaImage />
+          </button>
+          <button
+            type="button"
+            onClick={() => setPickerType(pickerType === MessageType.STICKER ? null : MessageType.STICKER)}
+            className="text-gray-500 hover:text-blue-500"
+          >
+            <FaStickyNote />
+          </button>
+
           <input
-            aria-label={`Message ${activeUser.username}`}
             value={text}
             onChange={(e) => {
               setText(e.target.value);
               onTyping(activeUser._id, e.target.value.length > 0);
             }}
             placeholder={`Message ${activeUser.username}...`}
-            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full ps-10 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 pr-12"
-            style={{ minHeight: '44px' }}
+            className="flex-1 border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
           />
-          {text.trim() && (
-            <button
-              type="button"
-              onClick={() => setText('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <FaTimes className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-        <button
-          type="submit"
-          disabled={!text.trim()}
-          className="btn-primary px-6 py-3 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-        >
-          <FaPaperPlane className="w-4 h-4" />
-          <span className="hidden sm:inline">Send</span>
-        </button>
-      </form>
+
+          <button
+            type="submit"
+            disabled={!text.trim()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            <FaPaperPlane />
+          </button>
+        </form>
+
+        {pickerType && (
+          <div className="absolute bottom-16 left-4 z-50 bg-white shadow-lg rounded-xl p-2">
+            {pickerType === MessageType.EMOJI && (
+              <EmojiPickerComponent onEmojiSelect={handleEmojiSelect} isOpen onClose={() => setPickerType(null)} />
+            )}
+            {pickerType === MessageType.GIF && (
+              <GifPickerComponent onGifSelect={handleGifSelect} isOpen onClose={() => setPickerType(null)} />
+            )}
+            {pickerType === MessageType.STICKER && (
+              <StickerPickerComponent
+                onStickerSelect={handleStickerSelect}
+                isOpen
+                onClose={() => setPickerType(null)}
+              />
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
