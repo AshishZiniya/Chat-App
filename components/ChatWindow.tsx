@@ -253,7 +253,9 @@ export default function ChatWindow({
                     )
                     .map((m, idx) => {
                         const isMine = m.from === myId;
-                        const sender = users.find(
+                        // Use populated data from message for sender info
+                        const senderData = typeof m.from === 'object' ? m.from : null;
+                        const senderFromUsers = users.find(
                             (u) =>
                                 u._id ===
                                 (typeof m.from === 'string'
@@ -261,27 +263,35 @@ export default function ChatWindow({
                                     : m.from._id)
                         );
                         const senderAvatar =
-                            sender?.avatar ||
-                            `https://ui-avatars.com/api/?name=${sender?.username || (typeof m.from === 'object' ? m.from.username : 'Unknown')}`;
+                            senderData?.avatar ||
+                            senderFromUsers?.avatar ||
+                            `https://ui-avatars.com/api/?name=${senderData?.username || senderFromUsers?.username || 'Unknown'}`;
                         const senderUsername =
-                            sender?.username ||
-                            (typeof m.from === 'object'
-                                ? m.from.username
-                                : 'Unknown');
+                            senderData?.username ||
+                            senderFromUsers?.username ||
+                            'Unknown';
+                        const isOnline = senderFromUsers?.online || false;
                         return (
                             <div
                                 key={String(m._id) + idx}
                                 className={`flex items-end gap-3 mb-6 ${isMine ? 'justify-end' : 'justify-start'}`}
                             >
                                 {!isMine && (
-                                    <Image
-                                        src={senderAvatar}
-                                        alt={`${senderUsername} avatar`}
-                                        width={36}
-                                        height={36}
-                                        className="w-9 h-9 rounded-full ring-2 ring-white shadow-sm shrink-0"
-                                        unoptimized
-                                    />
+                                    <div className="relative">
+                                        <Image
+                                            src={senderAvatar}
+                                            alt={`${senderUsername} avatar`}
+                                            width={36}
+                                            height={36}
+                                            className="w-9 h-9 rounded-full ring-2 ring-white shadow-sm shrink-0"
+                                            unoptimized
+                                        />
+                                        <span
+                                            className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                                                isOnline ? 'bg-green-500' : 'bg-gray-400'
+                                            }`}
+                                        ></span>
+                                    </div>
                                 )}
                                 <div
                                     className={`max-w-xs lg:max-w-md rounded-2xl px-4 py-2 relative group ${
@@ -329,9 +339,15 @@ export default function ChatWindow({
                                                     }
                                                     width={200}
                                                     height={150}
-                                                    className="rounded mt-2 max-w-full h-auto"
+                                                    className="rounded mt-2 max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
                                                     unoptimized
+                                                    onClick={() => m.webUrl && window.open(m.webUrl, '_blank')}
                                                 />
+                                            )}
+                                            {m.webUrl && (
+                                                <div className="mt-1 text-xs text-blue-500 hover:text-blue-700 cursor-pointer" onClick={() => window.open(m.webUrl!, '_blank')}>
+                                                    {m.webUrl}
+                                                </div>
                                             )}
                                         </div>
                                     ) : m.type === MessageType.FILE ? (
@@ -434,14 +450,21 @@ export default function ChatWindow({
                                     </div>
                                 </div>
                                 {isMine && (
-                                    <Image
-                                        src={senderAvatar}
-                                        alt={`${senderUsername} avatar`}
-                                        width={36}
-                                        height={36}
-                                        className="w-9 h-9 rounded-full ring-2 ring-white shadow-sm shrink-0"
-                                        unoptimized
-                                    />
+                                    <div className="relative">
+                                        <Image
+                                            src={senderAvatar}
+                                            alt={`${senderUsername} avatar`}
+                                            width={36}
+                                            height={36}
+                                            className="w-9 h-9 rounded-full ring-2 ring-white shadow-sm shrink-0"
+                                            unoptimized
+                                        />
+                                        <span
+                                            className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                                                isOnline ? 'bg-green-500' : 'bg-gray-400'
+                                            }`}
+                                        ></span>
+                                    </div>
                                 )}
                             </div>
                         );

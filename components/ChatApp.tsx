@@ -34,26 +34,15 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
         isSearching: false,
     });
 
-    // Load activeUser and messages from localStorage on mount
+    // Load activeUser from localStorage on mount
     useEffect(() => {
         const savedActiveUser = localStorage.getItem('activeUser');
-        const savedMessages = localStorage.getItem('chatMessages');
-
         if (savedActiveUser) {
             try {
                 const user = JSON.parse(savedActiveUser);
                 setChatState((prev) => ({ ...prev, activeUser: user }));
             } catch {
                 localStorage.removeItem('activeUser');
-            }
-        }
-
-        if (savedMessages) {
-            try {
-                const messages = JSON.parse(savedMessages);
-                setChatState((prev) => ({ ...prev, messages }));
-            } catch {
-                localStorage.removeItem('chatMessages');
             }
         }
     }, []);
@@ -103,50 +92,33 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
                     )
                 )
                     return prev;
-                const newMessages = [...prev.messages, m];
-                // Persist messages to localStorage
-                localStorage.setItem('chatMessages', JSON.stringify(newMessages));
-                return { ...prev, messages: newMessages };
+                return { ...prev, messages: [...prev.messages, m] };
             });
         });
 
         s.on('conversation', (conv: Message[]) => {
-            setChatState((prev) => {
-                // Persist messages to localStorage
-                localStorage.setItem('chatMessages', JSON.stringify(conv));
-                return { ...prev, messages: conv };
-            });
+            setChatState((prev) => ({ ...prev, messages: conv }));
         });
 
         s.on('messages:pending', (pending: Message[]) => {
             // append pending messages
-            setChatState((prev) => {
-                const newMessages = [...prev.messages, ...pending];
-                // Persist messages to localStorage
-                localStorage.setItem('chatMessages', JSON.stringify(newMessages));
-                return {
-                    ...prev,
-                    messages: newMessages,
-                };
-            });
+            setChatState((prev) => ({
+                ...prev,
+                messages: [...prev.messages, ...pending],
+            }));
         });
 
         s.on('message:deleted', (p: { id: string; deletedBy: string }) => {
-            setChatState((prev) => {
-                const newMessages = prev.messages.map((m) => {
+            setChatState((prev) => ({
+                ...prev,
+                messages: prev.messages.map((m) => {
                     if (String(m._id) !== String(p.id)) return m;
                     return {
                         ...m,
                         deletedBy: [...(m.deletedBy || []), p.deletedBy],
                     };
-                });
-                // Persist messages to localStorage
-                localStorage.setItem('chatMessages', JSON.stringify(newMessages));
-                return {
-                    ...prev,
-                    messages: newMessages,
-                };
-            });
+                }),
+            }));
         });
 
         s.on('typing', (p: TypingPayload) => {
@@ -195,15 +167,10 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
     const handleDelete = useCallback((id: string) => {
         socketRef.current?.emit('delete:message', { id });
         // optimistic UI: remove immediately
-        setChatState((prev) => {
-            const newMessages = prev.messages.filter((m) => String(m._id) !== String(id));
-            // Persist messages to localStorage
-            localStorage.setItem('chatMessages', JSON.stringify(newMessages));
-            return {
-                ...prev,
-                messages: newMessages,
-            };
-        });
+        setChatState((prev) => ({
+            ...prev,
+            messages: prev.messages.filter((m) => String(m._id) !== String(id)),
+        }));
     }, []);
 
     const loadMoreMessages = useCallback(async () => {
@@ -228,17 +195,12 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
             const result = await response.json();
             const newMessages = result.messages;
 
-            setChatState((prev) => {
-                const updatedMessages = [...newMessages, ...prev.messages];
-                // Persist messages to localStorage
-                localStorage.setItem('chatMessages', JSON.stringify(updatedMessages));
-                return {
-                    ...prev,
-                    messages: updatedMessages,
-                    hasMoreMessages: newMessages.length === 50,
-                    isLoadingMore: false,
-                };
-            });
+            setChatState((prev) => ({
+                ...prev,
+                messages: [...newMessages, ...prev.messages],
+                hasMoreMessages: newMessages.length === 50,
+                isLoadingMore: false,
+            }));
         } catch (error) {
             console.error('Load more messages error:', error);
             setChatState((prev) => ({
@@ -334,7 +296,7 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
     );
 
     return (
-        <div className="flex-1 flex flex-col lg:flex-row bg-transparent">
+        <div className="flex-1 flex flex-col lg:flex-row bg-transparent relative">
             <div className="chat-sidebar">
                 <Sidebar
                     users={chatState.users}

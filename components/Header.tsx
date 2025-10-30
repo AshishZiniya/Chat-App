@@ -26,7 +26,7 @@ export default function Header() {
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-5">
                     <div className="hidden md:flex items-center gap-2 text-sm text-gray-600">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                         <span>All systems operational</span>
