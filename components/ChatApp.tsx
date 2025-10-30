@@ -34,15 +34,26 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
         isSearching: false,
     });
 
-    // Load activeUser from localStorage on mount
+    // Load activeUser and messages from localStorage on mount
     useEffect(() => {
         const savedActiveUser = localStorage.getItem('activeUser');
+        const savedMessages = localStorage.getItem('chatMessages');
+
         if (savedActiveUser) {
             try {
                 const user = JSON.parse(savedActiveUser);
                 setChatState((prev) => ({ ...prev, activeUser: user }));
             } catch {
                 localStorage.removeItem('activeUser');
+            }
+        }
+
+        if (savedMessages) {
+            try {
+                const messages = JSON.parse(savedMessages);
+                setChatState((prev) => ({ ...prev, messages }));
+            } catch {
+                localStorage.removeItem('chatMessages');
             }
         }
     }, []);
@@ -92,33 +103,57 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
                     )
                 )
                     return prev;
-                return { ...prev, messages: [...prev.messages, m] };
+                const newMessages = [...prev.messages, m];
+                // Persist messages to localStorage
+                localStorage.setItem('chatMessages', JSON.stringify(newMessages));
+                return { ...prev, messages: newMessages };
             });
         });
 
         s.on('conversation', (conv: Message[]) => {
-            setChatState((prev) => ({ ...prev, messages: conv }));
+            setChatState((prev) => {
+                // Merge with existing messages to avoid duplicates and preserve local state
+                const existingIds = new Set(prev.messages.map(m => String(m._id)));
+                const newMessages = conv.filter(m => !existingIds.has(String(m._id)));
+                const allMessages = [...prev.messages, ...newMessages];
+                // Persist messages to localStorage
+                localStorage.setItem('chatMessages', JSON.stringify(allMessages));
+                return { ...prev, messages: allMessages };
+            });
         });
 
         s.on('messages:pending', (pending: Message[]) => {
             // append pending messages
-            setChatState((prev) => ({
-                ...prev,
-                messages: [...prev.messages, ...pending],
-            }));
+            setChatState((prev) => {
+                // Filter out duplicates
+                const existingIds = new Set(prev.messages.map(m => String(m._id)));
+                const newPendingMessages = pending.filter(m => !existingIds.has(String(m._id)));
+                const allMessages = [...prev.messages, ...newPendingMessages];
+                // Persist messages to localStorage
+                localStorage.setItem('chatMessages', JSON.stringify(allMessages));
+                return {
+                    ...prev,
+                    messages: allMessages,
+                };
+            });
         });
 
         s.on('message:deleted', (p: { id: string; deletedBy: string }) => {
-            setChatState((prev) => ({
-                ...prev,
-                messages: prev.messages.map((m) => {
+            setChatState((prev) => {
+                const updatedMessages = prev.messages.map((m) => {
                     if (String(m._id) !== String(p.id)) return m;
                     return {
                         ...m,
                         deletedBy: [...(m.deletedBy || []), p.deletedBy],
                     };
-                }),
-            }));
+                });
+                // Persist updated messages to localStorage
+                localStorage.setItem('chatMessages', JSON.stringify(updatedMessages));
+                return {
+                    ...prev,
+                    messages: updatedMessages,
+                };
+            });
         });
 
         s.on('typing', (p: TypingPayload) => {
@@ -138,7 +173,7 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
         setChatState((prev) => ({
             ...prev,
             activeUser: user,
-            messages: [],
+            // Keep existing messages when switching users
             hasMoreMessages: true,
             searchQuery: '',
             searchResults: [],
@@ -167,10 +202,15 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
     const handleDelete = useCallback((id: string) => {
         socketRef.current?.emit('delete:message', { id });
         // optimistic UI: remove immediately
-        setChatState((prev) => ({
-            ...prev,
-            messages: prev.messages.filter((m) => String(m._id) !== String(id)),
-        }));
+        setChatState((prev) => {
+            const updatedMessages = prev.messages.filter((m) => String(m._id) !== String(id));
+            // Persist updated messages to localStorage
+            localStorage.setItem('chatMessages', JSON.stringify(updatedMessages));
+            return {
+                ...prev,
+                messages: updatedMessages,
+            };
+        });
     }, []);
 
     const loadMoreMessages = useCallback(async () => {
@@ -195,12 +235,17 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
             const result = await response.json();
             const newMessages = result.messages;
 
-            setChatState((prev) => ({
-                ...prev,
-                messages: [...newMessages, ...prev.messages],
-                hasMoreMessages: newMessages.length === 50,
-                isLoadingMore: false,
-            }));
+            setChatState((prev) => {
+                const updatedMessages = [...newMessages, ...prev.messages];
+                // Persist updated messages to localStorage
+                localStorage.setItem('chatMessages', JSON.stringify(updatedMessages));
+                return {
+                    ...prev,
+                    messages: updatedMessages,
+                    hasMoreMessages: newMessages.length === 50,
+                    isLoadingMore: false,
+                };
+            });
         } catch (error) {
             console.error('Load more messages error:', error);
             setChatState((prev) => ({
