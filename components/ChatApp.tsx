@@ -84,14 +84,17 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
         };
 
         const handleError = (error: { message: string }) => {
+            if (!error || !error.message) return;
             setChatState((prev) => ({ ...prev, error: error.message }));
         };
 
         const handleUsersUpdated = (list: User[]) => {
+            if (!list || !Array.isArray(list)) return;
             setChatState((prev) => ({ ...prev, users: list }));
         };
 
         const handleMessage = (m: Message) => {
+            if (!m || !m._id) return;
             setChatState((prev) => {
                 // Check for duplicates
                 if (prev.messages.find((p: Message) => String(p._id) === String(m._id))) {
@@ -117,6 +120,7 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
         };
 
         const handleMessagesPending = (pending: Message[]) => {
+            if (!pending || !Array.isArray(pending)) return;
             setChatState((prev) => {
                 // Filter out duplicates
                 const existingIds = new Set(prev.messages.map(m => String(m._id)));
@@ -128,6 +132,7 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
         };
 
         const handleMessageDeleted = (p: { id: string; deletedBy: string; conversationId?: string }) => {
+            if (!p || !p.id) return;
             setChatState((prev) => {
                 // Remove the deleted message from state and localStorage
                 const updatedMessages = prev.messages.filter((m) => String(m._id) !== String(p.id));
@@ -146,6 +151,7 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
         };
 
         const handleTyping = (p: TypingPayload) => {
+            if (!p) return;
             setChatState((prev) => ({ ...prev, typingUsers: [p] }));
             setTimeout(() => {
                 setChatState((prev) => ({ ...prev, typingUsers: [] }));
