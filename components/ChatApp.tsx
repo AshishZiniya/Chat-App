@@ -1,9 +1,9 @@
 'use client';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { io, Socket } from 'socket.io-client';
 import { jwtDecode } from 'jwt-decode';
 import Sidebar from './Sidebar';
 import ChatWindow from './ChatWindow';
+import { createSocketClient } from '../lib/socket';
 import type {
     User,
     Message,
@@ -11,7 +11,7 @@ import type {
     MessageType,
     ChatState,
 } from '../types';
-import { LocalStorageKeys, WebSocketEvents, ApiEndpoints } from '../types';
+import { LocalStorageKeys, ApiEndpoints } from '../types';
 import { MessageType as MessageTypeEnum } from '../types';
 
 interface ChatAppProps {
@@ -20,7 +20,7 @@ interface ChatAppProps {
 }
 
 export default function ChatApp({ token, onLogout }: ChatAppProps) {
-    const socketRef = React.useRef<Socket | null>(null);
+    const socketRef = React.useRef<ReturnType<typeof createSocketClient> | null>(null);
     const [chatState, setChatState] = useState<ChatState>({
         messages: [],
         activeUser: null,
@@ -70,20 +70,13 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
     const myId = decoded?.sub ?? '';
 
     useEffect(() => {
-        const s = io(process.env.NEXT_PUBLIC_API_URL, {
-            auth: { token: `Bearer ${token}` },
-            transports: ['websocket'],
-        });
+        const s = createSocketClient(process.env.NEXT_PUBLIC_API_URL || '', token);
         socketRef.current = s;
+        s.connect();
 
         // WebSocket event handlers
         const handleConnect = () => {
-            console.log('connected', s.id);
-            setChatState((prev) => ({
-                ...prev,
-                isConnected: true,
-                error: null,
-            }));
+            setChatState((prev) => ({ ...prev, isConnected: true }));
         };
 
         const handleDisconnect = () => {
@@ -112,6 +105,7 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
         };
 
         const handleConversation = (conv: Message[]) => {
+            if (!conv || !Array.isArray(conv)) return;
             setChatState((prev) => {
                 // Merge with existing messages to avoid duplicates
                 const existingIds = new Set(prev.messages.map(m => String(m._id)));
@@ -159,15 +153,15 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
         };
 
         // Register event handlers
-        s.on(WebSocketEvents.USERS_UPDATED, handleUsersUpdated);
-        s.on(WebSocketEvents.MESSAGE, handleMessage);
-        s.on(WebSocketEvents.CONVERSATION, handleConversation);
-        s.on(WebSocketEvents.MESSAGES_PENDING, handleMessagesPending);
-        s.on(WebSocketEvents.MESSAGE_DELETED, handleMessageDeleted);
-        s.on(WebSocketEvents.TYPING, handleTyping);
+        s.onUsersUpdated((data) => handleUsersUpdated(data.users as unknown as User[]));
+        s.onMessage((data) => handleMessage(data as unknown as Message));
+        s.onConversation((data) => handleConversation(data.messages as unknown as Message[]));
+        s.onMessagesPending((data) => handleMessagesPending(data.messages as unknown as Message[]));
+        s.onMessageDeleted(handleMessageDeleted);
+        s.onTyping(handleTyping);
+        s.onError(handleError);
         s.on('connect', handleConnect);
         s.on('disconnect', handleDisconnect);
-        s.on(WebSocketEvents.ERROR, handleError);
 
         return () => {
             s.disconnect();
@@ -186,22 +180,22 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
         // Persist active user to localStorage
         localStorage.setItem(LocalStorageKeys.ACTIVE_USER, JSON.stringify(user));
         // Request conversation from database
-        socketRef.current?.emit(WebSocketEvents.GET_CONVERSATION, { withUserId: user._id });
+        socketRef.current?.getConversation({ withUserId: user._id });
     }, []);
 
     const sendMessage = useCallback(
         (to: string, text: string, type: MessageType = MessageTypeEnum.TEXT) => {
-            socketRef.current?.emit(WebSocketEvents.MESSAGE, { to, text, type });
+            socketRef.current?.sendMessage({ to, text, type });
         },
         []
     );
 
     const sendTyping = useCallback((to: string, typing: boolean) => {
-        socketRef.current?.emit(WebSocketEvents.TYPING, { to, typing });
+        socketRef.current?.sendTyping({ to, typing });
     }, []);
 
     const handleDelete = useCallback((id: string) => {
-        socketRef.current?.emit(WebSocketEvents.DELETE_MESSAGE, { id });
+        socketRef.current?.deleteMessage({ id });
         // Optimistic UI update: remove immediately from state and localStorage
         setChatState((prev) => {
             const updatedMessages = prev.messages.filter((m) => String(m._id) !== String(id));
@@ -323,7 +317,7 @@ export default function ChatApp({ token, onLogout }: ChatAppProps) {
 
                 const result = await response.json();
                 // Emit the file message via socket
-                socketRef.current?.emit(WebSocketEvents.MESSAGE, {
+                socketRef.current?.sendMessage({
                     to,
                     text: result.message.fileUrl,
                     type: 'file',

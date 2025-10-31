@@ -24,7 +24,7 @@ export default function Sidebar({
 
     const filteredUsers = React.useMemo(
         () =>
-            users
+            (users || [])
                 .filter((u: User) =>
                     meId ? u._id !== meId : u.username !== meUsername
                 )
